@@ -28,6 +28,13 @@ import java.util.Random;
 
 public class BeanCounterLogicImpl implements BeanCounterLogic {
 	// TODO: Add member methods and variables as needed
+	private Bean [] bean;
+	private Bean [] beanMachine;
+	private int [] slotArray;
+	int slotCount;
+	int rBeans;
+	int tsBeans;
+	
 
 	/**
 	 * Constructor - creates the bean counter logic object that implements the core
@@ -37,6 +44,11 @@ public class BeanCounterLogicImpl implements BeanCounterLogic {
 	 */
 	BeanCounterLogicImpl(int slotCount) {
 		// TODO: Implement
+		this.slotCount = slotCount;
+		beanMachine = new Bean [slotCount];
+		slotArray = new int [slotCount];
+		for (int i = 0; i < slotCount; i++) beanMachine[i] = null;
+		
 	}
 
 	/**
@@ -46,7 +58,8 @@ public class BeanCounterLogicImpl implements BeanCounterLogic {
 	 */
 	public int getSlotCount() {
 		// TODO: Implement
-		return 1;
+		
+		return slotCount;
 	}
 	
 	/**
@@ -56,7 +69,7 @@ public class BeanCounterLogicImpl implements BeanCounterLogic {
 	 */
 	public int getRemainingBeanCount() {
 		// TODO: Implement
-		return 0;
+		return rBeans;
 	}
 
 	/**
@@ -67,6 +80,15 @@ public class BeanCounterLogicImpl implements BeanCounterLogic {
 	 */
 	public int getInFlightBeanXPos(int yPos) {
 		// TODO: Implement
+		boolean largeEnoughY = yPos >= 0;
+		boolean smallEnoughY = yPos < slotCount;
+		boolean valid = beanMachine[yPos] != null;
+		if (largeEnoughY && smallEnoughY && valid) {
+			int xPos = beanMachine[yPos].getXPos();
+			return xPos; 
+		}
+
+
 		return NO_BEAN_IN_YPOS;
 	}
 
@@ -78,7 +100,7 @@ public class BeanCounterLogicImpl implements BeanCounterLogic {
 	 */
 	public int getSlotBeanCount(int i) {
 		// TODO: Implement
-		return 0;
+		return slotArray[i];
 	}
 
 	/**
@@ -88,7 +110,14 @@ public class BeanCounterLogicImpl implements BeanCounterLogic {
 	 */
 	public double getAverageSlotBeanCount() {
 		// TODO: Implement
-		return 0;
+		int beans = 0;
+		for (int i = 0; i < slotCount; i++) {
+			int weight = slotArray[i]*i;
+			beans += weight;
+		}
+		double average = 0;
+		if (tsBeans > 0) average = (double)beans/tsBeans;
+		return average;
 	}
 
 	/**
@@ -99,6 +128,17 @@ public class BeanCounterLogicImpl implements BeanCounterLogic {
 	 */
 	public void upperHalf() {
 		// TODO: Implement
+		int removeBeans = tsBeans/2;
+		int pos = 0;
+		while (removeBeans > 0) {
+			while (slotArray[pos] > 0) {
+				removeBeans--;
+				slotArray[pos]--;
+				tsBeans--;
+				if (removeBeans == 0) break;
+			}
+			pos++;
+		}
 	}
 
 	/**
@@ -109,6 +149,17 @@ public class BeanCounterLogicImpl implements BeanCounterLogic {
 	 */
 	public void lowerHalf() {
 		// TODO: Implement
+		int removeBeans = tsBeans/2;
+		int pos = slotCount - 1;
+		while (removeBeans > 0) {
+			while (slotArray[pos] > 0) {
+				removeBeans--;
+				slotArray[pos]--;
+				tsBeans--;
+				if (removeBeans == 0) break;
+			}
+			pos--;
+		}
 	}
 
 	/**
@@ -119,6 +170,21 @@ public class BeanCounterLogicImpl implements BeanCounterLogic {
 	 */
 	public void reset(Bean[] beans) {
 		// TODO: Implement
+		bean = new Bean [beans.length];
+		for (int i = 0; i < slotCount; i++) {
+			slotArray[i] = 0;
+			beanMachine[i] = null;
+		}
+		rBeans = 0; 
+		tsBeans = 0;
+		if (beans.length > 0) {
+			for (int i = 0; i < beans.length; i++) {
+				bean[i] = beans[i];
+				bean[i].reset();
+			}
+			beanMachine[0] = beans[0];
+			rBeans = beans.length - 1;
+		}
 	}
 
 	/**
@@ -128,6 +194,16 @@ public class BeanCounterLogicImpl implements BeanCounterLogic {
 	 */
 	public void repeat() {
 		// TODO: Implement
+		for (int i = 0; i < slotCount; i++) {
+			slotArray[i] = 0;
+			beanMachine[i] = null;
+		}
+		rBeans = 0;
+		tsBeans = 0;
+		if (bean.length > 0) {
+			beanMachine[0] = bean[0];
+			rBeans = bean.length - 1;
+		}
 	}
 
 	/**
@@ -140,7 +216,29 @@ public class BeanCounterLogicImpl implements BeanCounterLogic {
 	 */
 	public boolean advanceStep() {
 		// TODO: Implement
-		return false;
+		boolean change = false;
+		int i = slotCount - 1;
+		while (i >= 0) {
+			if(beanMachine[i]!=null) {
+				if (i == slotCount - 1) {
+					int xPos = beanMachine[i].getXPos();
+					slotArray[xPos]++;
+					tsBeans++;
+				} else {
+					beanMachine[i].choose();
+					beanMachine[i+1] = beanMachine[i];
+				}
+				change = true;
+				beanMachine[i] = null;
+			}
+			i--;
+		}
+		int leftBeans = bean.length - rBeans;
+		if (leftBeans < bean.length) {
+			rBeans--;
+			beanMachine[0] = bean[leftBeans];
+		}
+		return change;
 	}
 	
 	/**

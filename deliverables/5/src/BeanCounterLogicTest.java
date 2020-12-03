@@ -2,6 +2,8 @@ import java.util.Random;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import static org.junit.Assert.*;
+import gov.nasa.jpf.vm.Verify;
 
 /**
  * Code by @author Wonsun Ahn
@@ -38,6 +40,11 @@ public class BeanCounterLogicTest {
 			 * how to use the Verify API, look at:
 			 * https://github.com/javapathfinder/jpf-core/wiki/Verify-API-of-JPF
 			 */
+			isLuck = Verify.getBoolean();
+			beanCount = Verify.getInt(0,3);
+			slotCount = Verify.getInt(1,5);
+			
+			
 		} else {
 			assert (false);
 		}
@@ -75,6 +82,28 @@ public class BeanCounterLogicTest {
 	@Test
 	public void testReset() {
 		// TODO: Implement
+		
+		logic.reset(beans);
+		int fBeans = fCount();
+		int sBeans = sCount();
+		
+		if (beanCount == 0) {
+			
+			int actualBeanCount = logic.getRemainingBeanCount();
+			assertEquals(failString, 0 , actualBeanCount);
+			assertEquals(failString, 0 , fBeans);
+			assertEquals(failString, 0 , sBeans);
+
+	
+		} else if (beanCount > 0) {
+			int expectedBeanCount = beanCount - 1;
+			int actualBeanCount = logic.getRemainingBeanCount();
+			assertEquals(failString, expectedBeanCount, actualBeanCount);
+			assertEquals(failString, 1, fBeans);
+			assertEquals(failString, 0 , sBeans);
+
+		}
+		
 		/*
 		 * Currently, it just prints out the failString to demonstrate to you all the
 		 * cases considered by Java Path Finder. If you called the Verify API correctly
@@ -89,7 +118,7 @@ public class BeanCounterLogicTest {
 		 * 
 		 * PLEASE REMOVE when you are done implementing.
 		 */
-		System.out.println(failString);
+		//System.out.println(failString);
 	}
 
 	/**
@@ -103,7 +132,22 @@ public class BeanCounterLogicTest {
 	@Test
 	public void testAdvanceStepCoordinates() {
 		// TODO: Implement
+		logic.reset(beans);
+		boolean valid = true;
+		while (logic.advanceStep()) {
+			for(int i = 0; i < slotCount; i++) {
+				int xPos = logic.getInFlightBeanXPos(i);
+				if (xPos > slotCount) {
+					valid = false;
+					
+				}
+				
+			}
+			assertTrue(failString, valid);
+			
+		}
 	}
+	
 
 	/**
 	 * Test case for boolean advanceStep().
@@ -116,6 +160,19 @@ public class BeanCounterLogicTest {
 	@Test
 	public void testAdvanceStepBeanCount() {
 		// TODO: Implement
+		
+		logic.reset(beans);
+		while (logic.advanceStep()) {
+			int rBeans = logic.getRemainingBeanCount();
+			int fBeans = fCount();
+			
+			int sBeans = sCount();
+			
+			int tBeans = sBeans + fBeans + rBeans;
+			assertEquals(failString, beanCount, tBeans);
+		
+		}
+		
 	}
 
 	/**
@@ -131,6 +188,19 @@ public class BeanCounterLogicTest {
 	@Test
 	public void testAdvanceStepPostCondition() {
 		// TODO: Implement
+		logic.reset(beans);
+		while (logic.advanceStep()) {
+			
+		}
+		int rBeans = logic.getRemainingBeanCount();
+		assertEquals(failString, 0, rBeans);
+		int fBeans = fCount();
+		
+		assertEquals(failString, 0, fBeans);
+		int sBeans = sCount();
+		assertEquals(failString, beanCount, sBeans);
+
+		
 	}
 	
 	/**
@@ -147,6 +217,67 @@ public class BeanCounterLogicTest {
 	@Test
 	public void testLowerHalf() {
 		// TODO: Implement
+		logic.reset(beans);
+		while (logic.advanceStep()) {
+			
+		}
+		int sBeans = sCount();
+		int removeBeans = (beanCount/2);
+		removeBeans = removeBeans - (beanCount-sBeans);
+		int [] old = new int [slotCount];
+		for (int i = 0; i < slotCount; i++) {
+			int count = logic.getSlotBeanCount(i);
+			old[i] = count;
+
+		}
+		logic.lowerHalf();
+		int pos = slotCount - 1;
+		while (removeBeans > 0) {
+			
+			while (old[pos] > 0) {
+				removeBeans--;
+				old[pos]--;
+				if (removeBeans == 0) {
+					break;
+				}
+				
+			}
+			pos--;
+		}
+		for (int i = 0; i < slotCount; i++) {
+			int count = logic.getSlotBeanCount(i);
+			assertEquals(failString, old[i], count);
+		}
+		
+	}
+	private int sCount() {
+		int sBeans = 0;
+		for (int i = 0; i < slotCount; i++) {
+			int count = logic.getSlotBeanCount(i);
+			sBeans += count;
+			
+		}
+		return sBeans;
+	}
+	
+	private int fCount() {
+		int fBeans = 0;
+		for (int i = 0; i < slotCount; i++) {
+			int xPos = logic.getInFlightBeanXPos(i);
+			if (xPos > -1) {
+				fBeans++;
+			}
+		}
+		return fBeans;
+	}
+	
+	@Test
+	public void testAdvanceStepFlightCount() {
+		logic.reset(beans);
+		int oldFBeans = fCount();
+		logic.advanceStep();
+		int newFBeans = fCount();
+		assertEquals(failString, oldFBeans + 1, newFBeans);
 	}
 	
 	/**
@@ -163,6 +294,38 @@ public class BeanCounterLogicTest {
 	@Test
 	public void testUpperHalf() {
 		// TODO: Implement
+		logic.reset(beans);
+		while (logic.advanceStep()) {
+			
+		}
+		int sBeans = sCount();
+		int removeBeans = (beanCount/2);
+		removeBeans = removeBeans - (beanCount-sBeans);
+		int [] old = new int [slotCount];
+		for (int i = 0; i < slotCount; i++) {
+			int count = logic.getSlotBeanCount(i);
+			old[i] = count;
+
+		}
+		logic.upperHalf();
+		int pos = 0;
+		while (removeBeans > 0) {
+			
+			while (old[pos] > 0) {
+				removeBeans--;
+				old[pos]--;
+				if (removeBeans == 0) {
+					break;
+				}
+				
+			}
+			pos++;
+		}
+		for (int i = 0; i < slotCount; i++) {
+			int count = logic.getSlotBeanCount(i);
+			assertEquals(failString, old[i], count);
+		}
+		
 	}
 	
 	/**
@@ -178,5 +341,26 @@ public class BeanCounterLogicTest {
 	@Test
 	public void testRepeat() {
 		// TODO: Implement
+		if (!isLuck) {
+			logic.reset(beans);
+			while (logic.advanceStep()) {
+				
+			}
+			int [] first = new int [slotCount];
+			for (int i =0; i < slotCount; i++) {
+				int count = logic.getSlotBeanCount(i);
+				first[i] = count;
+			}
+			logic.repeat();
+			while (logic.advanceStep()) {
+				
+			}
+			int [] second = new int [slotCount];
+			for (int i =0; i < slotCount; i++) {
+				int count = logic.getSlotBeanCount(i);
+				second[i] = count;
+				assertEquals(failString, first[i], second[i]);
+			}
+		}
 	}
 }
